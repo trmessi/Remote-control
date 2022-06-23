@@ -48,6 +48,72 @@ int MakeDriverInfo()
     //CServerSocket::getInstance()->Send(pack);
     return 0;
 }
+
+#include <io.h>
+#include <list>
+typedef struct  file_info
+{
+    file_info()
+    {
+        IsInvalid = FALSE;
+        IsDirectory = -1;
+        HasNext = TRUE;
+        memset(szFileName, 0, sizeof(szFileName));
+    }
+    BOOL IsInvalid;//是否有效
+    BOOL IsDirectory;//是否为目录  0否 1是
+    BOOL HasNext;//是否有后续  0没有 有
+    char szFileName[256];//文件名
+
+
+} FILEINFO, * PFILEINFO;
+
+int MakeDirectoryInfo()
+{
+    //std::list<FILEINFO>listFileInfos;
+    std::string strPath;
+    if (CServerSocket::getInstance()->GetFilePath(strPath) == false)
+    {
+        OutputDebugString(_T("当前命令不是获取文件列表,命令解析错误！！"));
+        return -1;
+    }
+    if (_chdir(strPath.c_str()) != 0)
+    {
+        FILEINFO finfo;
+        finfo.IsInvalid = TRUE;
+        finfo.IsDirectory = TRUE;
+        finfo.HasNext = FALSE;
+        memcpy(finfo.szFileName, strPath.c_str(), strPath.size());
+        //listFileInfos.push_back(finfo);
+        CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+        CServerSocket::getInstance()->Send(pack);
+        OutputDebugString(_T("没用权限，访问目录！"));
+        return -2;
+    }
+    _finddata_t fdata;
+    int hfind = 0;
+    if (_findfirst("*", &fdata) == -1)
+    {
+        OutputDebugString(_T("没有找到任何文件！"));
+        return -3;
+    }
+    do 
+    {
+        FILEINFO finfo;
+        finfo.IsDirectory = (fdata.attrib & _A_SUBDIR) != 0;
+        memcpy(finfo.szFileName, fdata.name, strlen(fdata.name));
+        //listFileInfos.push_back(finfo);
+		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+		CServerSocket::getInstance()->Send(pack);
+    } while (!_findnext(hfind,&fdata));
+    //发送信息到控制端
+    FILEINFO finfo;
+    finfo.HasNext = FALSE;
+	CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+	CServerSocket::getInstance()->Send(pack);
+    return 0;
+}
+
 int main()
 {
     int nRetCode = 0;
@@ -94,8 +160,10 @@ int main()
             case 1://查看磁盘分区
                 MakeDriverInfo();
                 break;
-            }
-            
+			case 2:
+                MakeDirectoryInfo();
+				break;
+            }   
         }
     }
     else
