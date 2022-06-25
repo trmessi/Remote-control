@@ -6,6 +6,7 @@
 #include "RemoteCtrl.h"
 #include"ServerSocket.h"
 #include<direct.h>
+#include <atlimage.h>
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -258,6 +259,38 @@ int MouseEvent()
     return 0;
 }
 
+int SendScreen()
+{
+    CImage screen;
+    HDC hScreen = ::GetDC(NULL);
+    int nBitPerPixel = GetDeviceCaps(hScreen, BITSPIXEL);
+    int nWidth = GetDeviceCaps(hScreen, HORZRES);
+    int nHeight = GetDeviceCaps(hScreen, VERTRES);
+    screen.Create(nWidth, nHeight, nBitPerPixel);
+    BitBlt(screen.GetDC(), 0, 0, 1920, 1080, hScreen, 0, 0, SRCCOPY);
+    ReleaseDC(NULL, hScreen);
+    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
+    if (hMem == NULL)return -1;
+    IStream* pStream = NULL;
+    HRESULT ret = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
+    if (ret == S_OK)
+    {
+        screen.Save(pStream, Gdiplus::ImageFormatPNG);
+        LARGE_INTEGER bg={ 0 };
+        pStream->Seek(bg, STREAM_SEEK_SET, NULL);
+        PBYTE pData = (PBYTE)GlobalLock(hMem);
+        SIZE_T nSize = GlobalSize(hMem);
+        CPacket pack(6, pData, nSize);
+        CServerSocket::getInstance()->Send(pack);
+        GlobalUnlock(hMem);
+    }
+    pStream->Release();
+    GlobalFree(hMem);
+    screen.ReleaseDC();
+
+    return 0;
+}
+
 int main()
 {
     int nRetCode = 0;
@@ -304,14 +337,20 @@ int main()
             case 1://查看磁盘分区
                 MakeDriverInfo();
                 break;
-			case 2:
+			case 2://查看指定目录下的文件
                 MakeDirectoryInfo();
 				break;
-            case 3:
+            case 3://打开文件
                 RunFile();
                 break;
-            case 4:
+            case 4://下载文件
                 DownloadFile();
+                break;
+            case 5:
+                MouseEvent();//鼠标操作
+                break;
+            case 6://发送屏幕内容==>发送屏幕截图
+                SendScreen();
                 break;
             }   
         }
