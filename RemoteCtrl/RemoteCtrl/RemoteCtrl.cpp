@@ -291,6 +291,74 @@ int SendScreen()
     return 0;
 }
 
+#include "LockDialog.h"
+CLockDialog dlg;
+unsigned threadid = 0;
+unsigned _stdcall threadLockDlg(void* arg)
+{
+	dlg.Create(IDD_DIALOG_INFO, NULL);
+	dlg.ShowWindow(SW_SHOW);
+	//窗口置顶
+	CRect rect;
+	//窗口覆盖全屏
+	rect.left = 0;
+	rect.top = 0;
+	rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
+	rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
+	rect.bottom *= 1.05;
+	dlg.MoveWindow(rect);
+	dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+	//限制鼠标活动范围
+	ShowCursor(false);
+	//隐藏任务栏
+	::ShowWindow(FindWindow(_T("Shell_TrayWnd"), NULL), SW_HIDE);
+	//dlg.GetWindowRect(rect);
+	//固定鼠标位置
+	rect.left = 0;
+	rect.top = 0;
+	rect.right = 1;
+	rect.bottom = 1;
+	ClipCursor(rect);
+	MSG msg;
+	while (GetMessage(&msg, NULL, 0, 0))
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+		if (msg.message == WM_KEYDOWN)
+		{
+			TRACE("msg:%08X wparam:%80x lparam:%08x\r\n", msg.message, msg.wParam, msg.lParam);
+			if (msg.wParam == 0x41)//按下a建 ，ESC（1B）退出
+			{
+				break;
+			}
+		}
+	}
+	
+	ShowCursor(true);
+    ::ShowWindow(FindWindow(_T("Shell_TrayWnd"), NULL), SW_SHOW);
+    dlg.DestroyWindow();
+    _endthreadex(0);
+    return 0;
+}
+
+int LockMachine()
+{
+    if ((dlg.m_hWnd == NULL) || (dlg.m_hWnd == INVALID_HANDLE_VALUE))
+    {
+        //_beginthread(threadLockDlg, 0, NULL);
+        _beginthreadex(NULL, 0, threadLockDlg, NULL, 0, &threadid);
+    }
+	CPacket pack(7, NULL, 0);
+	CServerSocket::getInstance()->Send(pack);
+	return 0;
+}
+
+int UnLockMachine()
+{
+    PostThreadMessage(threadid, WM_KEYDOWN, 0x41, 0);
+    return 0;
+}
+
 int main()
 {
     int nRetCode = 0;
@@ -331,7 +399,8 @@ int main()
                 int ret = pserver->DealCommand();
             }*/
             //全局静态变量
-            int nCmd = 1;
+            
+            int nCmd = 7;
             switch (nCmd)
             {
             case 1://查看磁盘分区
@@ -352,7 +421,21 @@ int main()
             case 6://发送屏幕内容==>发送屏幕截图
                 SendScreen();
                 break;
+            case 7://锁机
+                LockMachine();
+                Sleep(50);
+                LockMachine();
+                break;
+            case 8://解锁
+                UnLockMachine();
+                break;
             }   
+            Sleep(5000);
+                UnLockMachine();
+                while (dlg.m_hWnd != NULL)
+                {
+                    Sleep(10);
+           }
         }
     }
     else
