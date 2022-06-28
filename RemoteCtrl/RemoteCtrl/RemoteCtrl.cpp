@@ -46,7 +46,7 @@ int MakeDriverInfo()
     }
     CPacket pack(1, (BYTE*)result.c_str(), result.size());
     Dump((BYTE*) pack.Data(), pack.Size());
-    //CServerSocket::getInstance()->Send(pack);
+    CServerSocket::getInstance()->Send(pack);
     return 0;
 }
 
