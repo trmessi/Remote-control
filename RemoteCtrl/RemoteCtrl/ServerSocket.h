@@ -170,6 +170,7 @@ public:
 		sockaddr_in client_addr;
 		int cli_sz = sizeof(client_addr);
 		m_client = accept(m_sock, (sockaddr*)&client_addr, &cli_sz);
+		
 		if (m_client == -1)
 		{
 			return false;
@@ -187,6 +188,11 @@ public:
 		}
 		//char buffer[1024] = "";
 		char* buffer = new char[BUFFER_SIZE];//接收包的缓冲区
+		if (buffer == NULL)
+		{
+			TRACE("内存不足\r\n");
+			return -2;
+		}
 		memset(buffer, 0, BUFFER_SIZE);
 		size_t index = 0;
 		while (true)
@@ -194,6 +200,7 @@ public:
 			size_t len = recv(m_client, buffer+index, BUFFER_SIZE -index, 0);
 			if (len <= 0)
 			{
+				delete[]buffer;
 				return -1;
 			}
 			index += len;
@@ -203,9 +210,11 @@ public:
 			{
 				memmove(buffer, buffer + len, BUFFER_SIZE -len);
 				index -= len;
+				delete[]buffer;
 				return m_packet.sCmd;
 			}
 		}
+		delete[]buffer;
 		return -1;
 	}
 	bool Send(const char* pData, int nsize)
@@ -238,6 +247,15 @@ public:
 			return true;
 		}
 		return false;
+	}
+	CPacket& GetPacket()
+	{
+		return m_packet;
+	}
+	void CloseClient()
+	{
+		closesocket(m_client);
+		m_client = INVALID_SOCKET;
 	}
 private:
 	SOCKET m_sock;

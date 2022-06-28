@@ -359,6 +359,53 @@ int UnLockMachine()
     return 0;
 }
 
+int TestConnect()
+{
+    CPacket pack(1981, NULL, 0);
+	CServerSocket::getInstance()->Send(pack);
+	return 0;
+}
+
+int ExcuteCommand(int nCmd)
+{
+    int ret = 0;
+	switch (nCmd)
+	{
+	case 1://查看磁盘分区
+        ret=MakeDriverInfo();
+		break;
+	case 2://查看指定目录下的文件
+        ret = MakeDirectoryInfo();
+		break;
+	case 3://打开文件
+        ret = RunFile();
+		break;
+	case 4://下载文件
+        ret = DownloadFile();
+		break;
+	case 5:
+        ret = MouseEvent();//鼠标操作
+		break;
+	case 6://发送屏幕内容==>发送屏幕截图
+        ret = SendScreen();
+		break;
+	case 7://锁机
+        ret = LockMachine();
+		
+		break;
+	case 8://解锁
+        ret = UnLockMachine();
+		break;
+    case 1981:
+        ret = TestConnect();
+        break;
+	}
+    return ret;
+}
+
+
+
+
 int main()
 {
     int nRetCode = 0;
@@ -377,7 +424,7 @@ int main()
         else
         {
             // TODO: 在此处为应用程序的行为编写代码。
-            /*CServerSocket* pserver= CServerSocket::getInstance();
+            CServerSocket* pserver= CServerSocket::getInstance();
             int count= 0;
             if (pserver->InitSocket() == false)
             {
@@ -397,45 +444,16 @@ int main()
                     count++;
                 }
                 int ret = pserver->DealCommand();
-            }*/
-            //全局静态变量
-            
-            int nCmd = 7;
-            switch (nCmd)
-            {
-            case 1://查看磁盘分区
-                MakeDriverInfo();
-                break;
-			case 2://查看指定目录下的文件
-                MakeDirectoryInfo();
-				break;
-            case 3://打开文件
-                RunFile();
-                break;
-            case 4://下载文件
-                DownloadFile();
-                break;
-            case 5:
-                MouseEvent();//鼠标操作
-                break;
-            case 6://发送屏幕内容==>发送屏幕截图
-                SendScreen();
-                break;
-            case 7://锁机
-                LockMachine();
-                Sleep(50);
-                LockMachine();
-                break;
-            case 8://解锁
-                UnLockMachine();
-                break;
-            }   
-            Sleep(5000);
-                UnLockMachine();
-                while (dlg.m_hWnd != NULL)
+                if (ret > 0)
                 {
-                    Sleep(10);
-           }
+                    ret= ExcuteCommand(pserver->GetPacket().sCmd);
+                    if (ret != 0)
+                    {
+                        TRACE("执行命令失败,5d ret=%d\r\n", pserver->GetPacket().sCmd, ret);
+                    }
+                    pserver->CloseClient();
+                }
+            }
         }
     }
     else

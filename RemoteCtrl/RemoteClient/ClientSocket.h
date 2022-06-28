@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "framework.h"
 #include <string>
+#include<vector>
 #pragma pack(push)
 #pragma pack(1)
 
@@ -132,21 +133,8 @@ typedef struct MouseEvent
 }MOUSEEV, * PMOUSSEV;
 
 
-std::string GetErrorInfo(int wsaErrCode)
-{
-	std::string ret;
-	LPVOID lpMsgBuf = NULL;
-	FormatMessage(
-		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-		NULL,
-		wsaErrCode,
-	MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPSTR)&lpMsgBuf, 0, NULL
-		);
-	ret = (char*)lpMsgBuf;
-	LocalFree(lpMsgBuf);
-	return ret;
-}
+std::string GetMyErrInfo(int wsaErrCode);
+
 
 class CClientSocket
 {
@@ -161,7 +149,8 @@ public:
 	}
 	bool InitSocket(const std::string& strIPAddress)
 	{
-
+		if (m_sock != INVALID_SOCKET)CloseSocket();
+		m_sock = socket(PF_INET, SOCK_STREAM, 0);
 		//校验
 		if (m_sock == -1)
 		{
@@ -181,7 +170,7 @@ public:
 		if (ret == -1)
 		{
 			AfxMessageBox("连接失败");
-			TRACE("连接失败，%d %s\r\n", WSAGetLastError(), GetErrorInfo(WSAGetLastError()).c_str());
+			TRACE("连接失败，%d %s\r\n", WSAGetLastError(), GetMyErrInfo(WSAGetLastError()).c_str());
 		}
 		return true;
 	}
@@ -194,7 +183,7 @@ public:
 			return -1;
 		}
 		//char buffer[1024] = "";
-		char* buffer = new char[BUFFER_SIZE];//接收包的缓冲区
+		char* buffer =m_buffer.data();//接收包的缓冲区
 		memset(buffer, 0, BUFFER_SIZE);
 		size_t index = 0;
 		while (true)
@@ -247,7 +236,18 @@ public:
 		}
 		return false;
 	}
+	CPacket& GetPacket()
+	{
+		return m_packet;
+	}
+	void CloseSocket()
+	{
+		closesocket(m_sock);
+		m_sock = INVALID_SOCKET;
+	}
+
 private:
+	std::vector<char> m_buffer;
 	SOCKET m_sock;
 	CPacket m_packet;
 	CClientSocket() {
@@ -257,7 +257,7 @@ private:
 			MessageBox(NULL, _T("无法初始化套接字环境，请检测网络设置！"), _T("初始化错误！"), MB_OK | MB_ICONERROR);
 			exit(0);
 		}
-		m_sock = socket(PF_INET, SOCK_STREAM, 0);
+		m_buffer.resize(BUFFER_SIZE);
 	}
 	CClientSocket& operator=(const CClientSocket& ss) {}
 	CClientSocket(const CClientSocket& ss)
