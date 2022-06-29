@@ -52,22 +52,7 @@ int MakeDriverInfo()
 
 #include <io.h>
 #include <list>
-typedef struct  file_info
-{
-    file_info()
-    {
-        IsInvalid = FALSE;
-        IsDirectory = -1;
-        HasNext = TRUE;
-        memset(szFileName, 0, sizeof(szFileName));
-    }
-    BOOL IsInvalid;//是否有效
-    BOOL IsDirectory;//是否为目录  0否 1是
-    BOOL HasNext;//是否有后续  0没有 有
-    char szFileName[256];//文件名
 
-
-} FILEINFO, * PFILEINFO;
 
 int MakeDirectoryInfo()
 {
@@ -81,10 +66,7 @@ int MakeDirectoryInfo()
     if (_chdir(strPath.c_str()) != 0)
     {
         FILEINFO finfo;
-        finfo.IsInvalid = TRUE;
-        finfo.IsDirectory = TRUE;
         finfo.HasNext = FALSE;
-        memcpy(finfo.szFileName, strPath.c_str(), strPath.size());
         //listFileInfos.push_back(finfo);
         CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
         CServerSocket::getInstance()->Send(pack);
@@ -93,9 +75,13 @@ int MakeDirectoryInfo()
     }
     _finddata_t fdata;
     int hfind = 0;
-    if (_findfirst("*", &fdata) == -1)
+    if ((hfind= _findfirst("*", &fdata) )== -1)
     {
         OutputDebugString(_T("没有找到任何文件！"));
+		FILEINFO finfo;
+		finfo.HasNext = FALSE;
+		CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
+		CServerSocket::getInstance()->Send(pack);
         return -3;
     }
     do 
@@ -305,7 +291,7 @@ unsigned _stdcall threadLockDlg(void* arg)
 	rect.top = 0;
 	rect.right = GetSystemMetrics(SM_CXFULLSCREEN);
 	rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
-	rect.bottom *= 1.05;
+    rect.bottom = LONG(rect.bottom * 1.05);
 	dlg.MoveWindow(rect);
 	dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 	//限制鼠标活动范围
