@@ -143,6 +143,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	UpdateData(FALSE);
 	m_dlgStuts.Create(IDD_DLG_STATUS, this);
 	m_dlgStuts.ShowWindow(SW_HIDE);
+	m_isFull = false;
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -301,6 +302,40 @@ void CRemoteClientDlg::threadDownFile()
 	m_dlgStuts.ShowWindow(SW_HIDE);
 	EndWaitCursor();
 	MessageBox(_T("下载完成"), _T("完成"));
+}
+
+void CRemoteClientDlg::threadEntryForWatchData(void* arg)
+{
+	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
+	thiz->threadWatchData();
+	_endthread();
+}
+
+void CRemoteClientDlg::threadWatchData()
+{
+	CClientSocket* pClient = NULL;
+	do 
+	{
+		pClient = CClientSocket::getInstance();
+	} while (pClient==NULL);
+	for (;;)//等价while(true)
+	{
+		CPacket pack(6, NULL, 0);
+		bool ret = pClient->Send(pack);
+		if (ret)
+		{
+			int cmd = pClient->DealCommand();//拿数据
+			if (cmd == 6)
+			{
+				BYTE* pData=(BYTE*) pClient->GetPacket().strData.c_str();
+				//TODO:存入cimage
+				m_isFull = true;
+			}
+		}
+		else {
+			Sleep(1);
+		}
+	}
 }
 
 void CRemoteClientDlg::threadEntryForDownFile(void* arg)
