@@ -33,6 +33,10 @@ public:
 	{
 		return m_image;
 	}
+	void SetImageStatus(bool isFull= false)
+	{
+		m_isFull = isFull;
+	}
 private:
 	static void threadEntryForWatchData(void* arg);
 	void threadWatchData();
