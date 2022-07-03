@@ -294,12 +294,23 @@ unsigned _stdcall threadLockDlg(void* arg)
 	rect.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
     rect.bottom = LONG(rect.bottom * 1.05);
 	dlg.MoveWindow(rect);
+    CWnd* pText = dlg.GetDlgItem(IDC_STATIC);
+    if (pText)
+    {
+        CRect rtText;
+        pText->GetWindowRect(rtText);
+        int nWidth = rtText.Width() / 2;
+        int x = (rect.right - nWidth) / 2;
+        int nHeight = rtText.Height() / 2;
+        int y = (rect.bottom - nHeight) / 2;
+        pText->MoveWindow(x, y, rtText.Width(), rtText.Height());
+    }
 	dlg.SetWindowPos(&dlg.wndTopMost, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
 	//限制鼠标活动范围
 	ShowCursor(false);
 	//隐藏任务栏
 	::ShowWindow(FindWindow(_T("Shell_TrayWnd"), NULL), SW_HIDE);
-	//dlg.GetWindowRect(rect);
+	dlg.GetWindowRect(rect);
 	//固定鼠标位置
 	rect.left = 0;
 	rect.top = 0;
@@ -320,9 +331,9 @@ unsigned _stdcall threadLockDlg(void* arg)
 			}
 		}
 	}
-	
+    ClipCursor(NULL);
 	ShowCursor(true);
-    ::ShowWindow(FindWindow(_T("Shell_TrayWnd"), NULL), SW_SHOW);
+    ::ShowWindow(::FindWindow(_T("Shell_TrayWnd"), NULL), SW_SHOW);
     dlg.DestroyWindow();
     _endthreadex(0);
     return 0;
@@ -343,6 +354,8 @@ int LockMachine()
 int UnLockMachine()
 {
     PostThreadMessage(threadid, WM_KEYDOWN, 0x41, 0);
+	CPacket pack(8, NULL, 0);
+	CServerSocket::getInstance()->Send(pack);
     return 0;
 }
 
