@@ -24,6 +24,7 @@ public:
 private:
 	CImage m_image;//缓存
 	bool m_isFull;//true表示有缓存数据
+	bool m_isClosed;
 public:
 	bool isFull()const
 	{

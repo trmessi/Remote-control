@@ -323,7 +323,7 @@ void CRemoteClientDlg::threadWatchData()
 		pClient = CClientSocket::getInstance();
 	} while (pClient==NULL);
 	
-	for (;;)//等价while(true)
+	while(!m_isClosed)//等价while(true)
 	{
 		
 		if (m_isFull == false)
@@ -352,6 +352,8 @@ void CRemoteClientDlg::threadWatchData()
 					pStream->Write(pData, pClient->GetPacket().strData.size(), &length);
 					LARGE_INTEGER bg = { 0 };
 					pStream->Seek(bg, STREAM_SEEK_SET, 0);
+					if ((HBITMAP)m_image != NULL)
+						m_image.Destroy();
 					m_image.Load(pStream);
 					m_isFull = true;
 				}
@@ -594,11 +596,14 @@ LRESULT  CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
+	m_isClosed = false;
 	CWatchDialog dlg(this);
 	// TODO: 在此添加控件通知处理程序代码
-	_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
+	HANDLE hThread=(HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
 	
 	dlg.DoModal();
+	m_isClosed = true;
+	WaitForSingleObject(hThread,500);
 }
 
 
