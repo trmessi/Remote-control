@@ -17,13 +17,13 @@ class CCommand
 public:
 	CCommand();
 	~CCommand() {};
-	int  ExcuteCommand(int nCmd,std::list<CPacket>&,CPacket& inPacket);
-	static void RunCommand(void* arg, int status,std::list<CPacket>&listPacket, CPacket& inPacket)
+	int  ExcuteCommand(int nCmd,std::list<CPacket>& lstPack,CPacket& inPacket);
+	static void RunCommand(void* arg, int status,std::list<CPacket>&lstPacket, CPacket& inPacket)
 	{
 		CCommand* thiz = (CCommand*)arg;
 		if (status > 0)
 		{
-			int ret = thiz->ExcuteCommand(status,listPacket,inPacket);
+			int ret = thiz->ExcuteCommand(status,lstPacket,inPacket);
 			if ( ret!= 0)
 			{
 				
@@ -123,7 +123,7 @@ protected:
 	
 		return 0;
 	}
-	int MakeDirectoryInfo(std::list<CPacket>& listPacket, CPacket& inPacket)
+	int MakeDirectoryInfo(std::list<CPacket>& lstPacket, CPacket& inPacket)
 	{
 		//std::list<FILEINFO>listFileInfos;
 		std::string strPath;
@@ -134,7 +134,7 @@ protected:
 			FILEINFO finfo;
 			finfo.HasNext = FALSE;
 			//listFileInfos.push_back(finfo);
-			listPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
+			lstPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
 			OutputDebugString(_T("没用权限，访问目录！"));
 			return -2;
 		}
@@ -145,7 +145,7 @@ protected:
 			OutputDebugString(_T("没有找到任何文件！"));
 			FILEINFO finfo;
 			finfo.HasNext = FALSE;
-			listPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
+			lstPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
 			return -3;
 		}
 		do
@@ -154,23 +154,23 @@ protected:
 			finfo.IsDirectory = (fdata.attrib & _A_SUBDIR) != 0;
 			memcpy(finfo.szFileName, fdata.name, strlen(fdata.name));
 			//listFileInfos.push_back(finfo);
-			listPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
+			lstPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
 			
 		} while (!_findnext(hfind, &fdata));
 		//发送信息到控制端
 		FILEINFO finfo;
 		finfo.HasNext = FALSE;
 		TRACE("文件 %d \r\n", fdata.name);
-		listPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
+		lstPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
 		return 0;
 	}
 
-	int RunFile(std::list<CPacket>& listPacket, CPacket& inPacket)
+	int RunFile(std::list<CPacket>& lstPacket, CPacket& inPacket)
 	{
 		std::string strPath;
 		strPath = inPacket.strData;
 		ShellExecuteA(NULL, NULL, strPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
-		listPacket.push_back(CPacket(3, NULL, 0));
+		lstPacket.push_back(CPacket(3, NULL, 0));
 	
 		return 0;
 	}
@@ -205,12 +205,13 @@ protected:
 			} while (rlen >= 1024);
 			fclose(pFile);
 		}
+		//代码不一样，可能有问题
 		listPacket.push_back(CPacket(4, NULL, 0));
 		
 		return 0;
 	}
 
-	int MouseEvent(std::list<CPacket>& listPacket, CPacket& inPacket)
+	int MouseEvent(std::list<CPacket>& lstPacket, CPacket& inPacket)
 	{
 		MOUSEEV mouse;
 		memcpy(&mouse, inPacket.strData.c_str(), sizeof(MOUSEEV));
@@ -233,6 +234,7 @@ protected:
 
 			}
 			if (nFlags != 8)SetCursorPos(mouse.ptXY.x, mouse.ptXY.y);
+			
 			switch (mouse.nAction)
 			{
 			case 0://单击
@@ -297,7 +299,7 @@ protected:
 				mouse_event(MOUSEEVENTF_MOVE, mouse.ptXY.x, mouse.ptXY.y, 0, GetMessageExtraInfo());
 				break;
 			}
-			listPacket.push_back(CPacket(4, NULL, 0));
+			lstPacket.push_back(CPacket(5, NULL, 0));
 			
 		
 		

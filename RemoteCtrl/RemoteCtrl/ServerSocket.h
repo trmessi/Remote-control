@@ -42,11 +42,11 @@ public:
 				}
 				count++;
 			}
-			int ret1 = DealCommand();
-			if (ret1 > 0)
+			int ret = DealCommand();
+			if (ret > 0)
 			{
-				m_callback(m_arg, ret1,lstPackets,m_packet);
-				if (lstPackets.size() > 0)
+				m_callback(m_arg, ret,lstPackets,m_packet);
+				while(lstPackets.size() > 0)
 				{
 					Send(lstPackets.front());
 					lstPackets.pop_front();
