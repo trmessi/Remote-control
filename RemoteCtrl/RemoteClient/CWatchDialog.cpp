@@ -207,8 +207,8 @@ void CWatchDialog::OnMouseMove(UINT nFlags, CPoint point)
 		event.ptXY = remote;
 		event.nButton = 8;
 		event.nAction = 0;
-		//CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-		//pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM) & event);
+		CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
+		pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (WPARAM) & event);
 	}
 	CDialog::OnMouseMove(nFlags, point);
 }
