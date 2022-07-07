@@ -199,13 +199,13 @@ public:
 			return -1;
 		}
 		//char buffer[1024] = "";
-		char* buffer =m_buffer.data();//接收包的缓冲区
+		char* buffer =m_buffer.data();//接收包的缓冲区 TODO:多线程发送命令时冲突，使用了同一个buffer
 		
 		static size_t index = 0;
 		while (true)
 		{
 			size_t len = recv(m_sock, buffer + index, BUFFER_SIZE - index, 0);
-			if ((len <= 0)&&(index==0))
+			if (((int)len <= 0)&&((int)index==0))
 			{
 				return -1;
 			}

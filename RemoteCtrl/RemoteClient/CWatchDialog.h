@@ -18,12 +18,22 @@ public:
 #endif
 public:
 	int m_nObjWidth=-1;
-	int m_n_ObjHeight = -1;
+	int m_nObjHeight = -1;
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
-
+	
+	
 	DECLARE_MESSAGE_MAP()
 public:
+	bool m_isFull;//true表示有缓存数据
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
+	void SetImageStatus(bool isFull = false)
+	{
+		m_isFull = isFull;
+	}
+	bool isFull()const
+	{
+		return m_isFull;
+	}
 	CPoint UserPoinToRemoteScreenPoint(CPoint& point,bool isScreen=false);
 	virtual BOOL OnInitDialog();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);

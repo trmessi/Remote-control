@@ -3,7 +3,7 @@
 #include "ClientSocket.h"
 std::map<UINT, CClientController::MSGFUNC>CClientController:: m_mapFunc;
 CClientController* CClientController::m_instance = NULL;
-
+CClientController::CHelper CClientController::m_helper;
 CClientController* CClientController::getInstance()
 {
 	if (m_instance==NULL)
@@ -26,7 +26,7 @@ CClientController* CClientController::getInstance()
 
 		}
 	}
-	return nullptr;
+	return m_instance;
 }
 
 int CClientController::Invoke(CWnd*& pMainWnd)
@@ -57,12 +57,50 @@ LRESULT CClientController::SendMessage(MSG msg)
 	
 }
 
+int CClientController::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, size_t nLength)
+{
+	CClientSocket* pClient = CClientSocket::getInstance();
+	if (pClient->InitSocket() == false)return false;
+	pClient->Send(CPacket(nCmd, pData, nLength));
+	int cmd = DealCommand();
+	if (bAutoClose)
+	{
+		CloseSocket();
+	}
+	return cmd;
+}
+
+int CClientController::DownFile(CString strPath)
+{
+	CFileDialog dlg(FALSE, NULL, strPath, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
+		NULL, &m_remoteDlg);
+	CClientSocket* pClient = CClientSocket::getInstance();
+	if (dlg.DoModal() == IDOK)
+	{
+		m_strRemote = strPath;
+		m_strLocal = dlg.GetPathName();
+
+		m_hThreadDownload = (HANDLE)_beginthread(&CClientController::threadEntryDownload, 0, this);
+		if (WaitForSingleObject(m_hThreadDownload, 0) != WAIT_TIMEOUT)
+		{
+			return -1;
+		}
+		m_remoteDlg.BeginWaitCursor();
+
+		m_statusDlg.m_info.SetWindowText(_T("ÃüÁîÕýÔÚÖ´ÐÐ"));
+		m_statusDlg.ShowWindow(SW_SHOW);
+		m_statusDlg.CenterWindow(&m_remoteDlg);
+		m_statusDlg.SetActiveWindow();
+	}
+	return 0;
+}
+
 void CClientController::StrarWatchScreen()
 {
 	m_isClosed = false;
-	CWatchDialog dlg(&m_remoteDlg);
+	//m_watchDlg.SetParent(&m_remoteDlg);
 	m_hTreadWatch = (HANDLE)_beginthread(&CClientController::threadEntryWatchScreen, 0, this);
-	dlg.DoModal();
+	m_watchDlg.DoModal();
 	m_isClosed = true;
 	WaitForSingleObject(m_hTreadWatch, 500);
 }
@@ -80,7 +118,7 @@ void CClientController::threadDownloadFile()
 	CClientSocket* pClient = CClientSocket::getInstance();
 	do 
 	{
-		int ret = SendCommandPacket(4, false, (BYTE*)(LPCTSTR)m_strRemote.GetLength());
+		int ret = SendCommandPacket(4, false, (BYTE*)(LPCTSTR)m_strRemote,m_strRemote.GetLength());
 		long long nLength = *(long long*)pClient->GetPacket().strData.c_str();
 		if (nLength == 0)
 		{
@@ -123,7 +161,7 @@ void CClientController::threadWatchScreen()
 	Sleep(50);
 	while (!m_isClosed)
 	{
-		if (m_remoteDlg.isFull() == false)
+		if (m_watchDlg.isFull() == false)
 		{
 			int ret= SendCommandPacket(6);
 			if (ret == 6)
@@ -132,7 +170,7 @@ void CClientController::threadWatchScreen()
 				if (GetImage(m_remoteDlg.getImage()) == 0)
 				{
 					
-					m_remoteDlg.SetImageStatus(true);
+					m_watchDlg.SetImageStatus(true);
 				}
 				else
 				{
