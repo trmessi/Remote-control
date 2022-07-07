@@ -39,26 +39,16 @@ public:
 		m_isFull = isFull;
 	}
 private:
-	static void threadEntryForWatchData(void* arg);
-	void threadWatchData();
-	static void threadEntryForDownFile(void* arg);
-	void threadDownFile();
+	//static void threadEntryForWatchData(void* arg);
+	//void threadWatchData();
+	//static void threadEntryForDownFile(void* arg);
+	//void threadDownFile();
 	void LoadFileCur();
 	void LoadFileInfo();
 	CString GetPath(HTREEITEM hTree);
 	void DeleteTreeChildrenItem(HTREEITEM hTree);
-	//1.查看磁盘分区
-	//2.查看指定目录下的文件
-	//3.打开文件
-	//4.下载文件
-	// 5.鼠标操作
-	// 6.发送屏幕内容
-	// 7.锁机
-	// 8.解锁
-	//9.删除文件
-	// 1981.测试连接
-	//返回值是命令号，小于0则错误
-	int SendCommandPacket(int nCmd, bool bAutoClose=true,BYTE* pData = NULL, size_t nLength = 0);
+	
+	
 
 // 实现
 protected:
@@ -87,4 +77,6 @@ public:
 	afx_msg LRESULT OnSendPacket(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnBnClickedBtnStartWatch();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnEnChangeEditport();
 };

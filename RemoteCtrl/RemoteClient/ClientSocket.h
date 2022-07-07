@@ -14,7 +14,7 @@ public:
 	WORD sCmd;//控制命令
 	std::string strData;//包数据
 	WORD sSum;//和校验
-	std::string strOut;//整个包的信息
+	//std::string strOut;//整个包的信息
 	CPacket() {}
 	CPacket(WORD nCmd, const BYTE* pData, size_t nSize)
 	{
@@ -104,7 +104,7 @@ public:
 	{
 		return nLength + 2 + 4;
 	}
-	const char* Data()
+	const char* Data(std::string& strOut)const
 	{
 		strOut.resize(nLength + 6);
 		BYTE* pData = (BYTE*)strOut.c_str();
@@ -163,7 +163,7 @@ public:
 		}
 		return m_instance;
 	}
-	bool InitSocket(int nIP,int nPort)
+	bool InitSocket()
 	{
 		if (m_sock != INVALID_SOCKET)CloseSocket();
 		m_sock = socket(PF_INET, SOCK_STREAM, 0);
@@ -175,8 +175,8 @@ public:
 		sockaddr_in serv_adr;
 		memset(&serv_adr, 0, sizeof(serv_adr));
 		serv_adr.sin_family = AF_INET;
-		serv_adr.sin_addr.s_addr = htonl(nIP);
-		serv_adr.sin_port = htons(nPort);
+		serv_adr.sin_addr.s_addr = htonl(m_nIp);
+		serv_adr.sin_port = htons(m_nPort);
 		if (serv_adr.sin_addr.s_addr == INADDR_NONE)
 		{
 			AfxMessageBox("指定的IP地址不存在");
@@ -229,10 +229,12 @@ public:
 		}
 		return send(m_sock, pData, nsize, 0) > 0;
 	}
-	bool Send(CPacket& pack)
+	bool Send(const CPacket& pack)
 	{
 		if (m_sock == -1)return false;
-		return send(m_sock, pack.Data(), pack.Size(), 0) > 0;
+		std::string strOut;
+		pack.Data(strOut);
+		return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0;
 	}
 	bool GetFilePath(std::string& strPath)
 	{
@@ -261,12 +263,21 @@ public:
 		closesocket(m_sock);
 		m_sock = INVALID_SOCKET;
 	}
+	void MyUpdateAddress(int nIp, int nPort)
+	{
+		m_nIp = nIp;
+		m_nPort = nPort;
+	}
 
 private:
+	int m_nIp;//IP地址
+	int m_nPort;//端口
 	std::vector<char> m_buffer;
 	SOCKET m_sock;
 	CPacket m_packet;
-	CClientSocket() {
+	CClientSocket() :
+		m_nIp(INADDR_ANY), m_nPort(0)
+	{
 
 		if (InitSockEnv() == FALSE)
 		{
@@ -276,9 +287,11 @@ private:
 		m_buffer.resize(BUFFER_SIZE);
 		memset(m_buffer.data(), 0, BUFFER_SIZE);
 	}
-	CClientSocket& operator=(const CClientSocket& ss) {}
+	CClientSocket& operator=(const CClientSocket& ss){}
 	CClientSocket(const CClientSocket& ss)
 	{
+		m_nIp = ss.m_nIp;
+		m_nPort = ss.m_nPort;
 		m_sock = ss.m_sock;
 	}
 	BOOL InitSockEnv()
