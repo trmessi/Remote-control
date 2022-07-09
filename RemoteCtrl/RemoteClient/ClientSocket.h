@@ -236,11 +236,11 @@ public:
 			//if (InitSocket() == false)return false;
 			_beginthread(&CClientSocket::threadEntry, 0, this);
 		}
-		auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>>(pack.hEvent, lstPacks));
+		auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>&>(pack.hEvent, lstPacks));
 		m_mapAutoClosed.insert(std::pair<HANDLE, bool>(pack.hEvent, isAutoClosed));
 		m_lstSend.push_back(pack);
 		WaitForSingleObject(pack.hEvent, INFINITE);
-		std::map<HANDLE, std::list<CPacket>>::iterator it;
+		std::map<HANDLE, std::list<CPacket>&>::iterator it;
 		it= m_mapAck.find(pack.hEvent);
 		if (it != m_mapAck.end())
 		{
@@ -292,7 +292,7 @@ public:
 private:
 	bool m_bAutoClosed;
 	std::list<CPacket>m_lstSend;
-	std::map<HANDLE, std::list<CPacket>> m_mapAck;
+	std::map<HANDLE, std::list<CPacket>&> m_mapAck;
 	std::map<HANDLE, bool>m_mapAutoClosed;
 	int m_nIp;//IPµØÖ·
 	int m_nPort;//¶Ë¿Ú
