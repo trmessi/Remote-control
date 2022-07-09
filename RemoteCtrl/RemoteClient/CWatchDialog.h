@@ -17,8 +17,9 @@ public:
 	enum { IDD = IDD_DLG_WATCH };
 #endif
 public:
-	int m_nObjWidth=-1;
-	int m_nObjHeight = -1;
+	int m_nObjWidth;
+	int m_nObjHeight;
+	CImage m_image;
 protected:
 	
 	
@@ -33,6 +34,10 @@ public:
 	bool isFull()const
 	{
 		return m_isFull;
+	}
+	CImage& getImage()
+	{
+		return m_image;
 	}
 	CPoint UserPoinToRemoteScreenPoint(CPoint& point,bool isScreen=false);
 	virtual BOOL OnInitDialog();

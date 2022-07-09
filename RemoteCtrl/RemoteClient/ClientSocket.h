@@ -229,24 +229,22 @@ public:
 	}
 	
 
-	bool SendPacket(const CPacket& pack,std::list<CPacket>&lstPacks)
+	bool SendPacket(const CPacket& pack,std::list<CPacket>&lstPacks,bool isAutoClosed=true)
 	{
 		if (m_sock == INVALID_SOCKET)
 		{
-			if (InitSocket() == false)return false;
+			//if (InitSocket() == false)return false;
 			_beginthread(&CClientSocket::threadEntry, 0, this);
 		}
+		auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>>(pack.hEvent, lstPacks));
+		m_mapAutoClosed.insert(std::pair<HANDLE, bool>(pack.hEvent, isAutoClosed));
 		m_lstSend.push_back(pack);
 		WaitForSingleObject(pack.hEvent, INFINITE);
 		std::map<HANDLE, std::list<CPacket>>::iterator it;
 		it= m_mapAck.find(pack.hEvent);
 		if (it != m_mapAck.end())
 		{
-			std::list<CPacket>::iterator i;
-			for (i=it->second.begin();i!=it->second.end();i++)
-			{
-				lstPacks.push_back(*i);
-			}
+			
 			m_mapAck.erase(it);
 			return true;
 		}
@@ -292,8 +290,10 @@ public:
 	}
 
 private:
+	bool m_bAutoClosed;
 	std::list<CPacket>m_lstSend;
 	std::map<HANDLE, std::list<CPacket>> m_mapAck;
+	std::map<HANDLE, bool>m_mapAutoClosed;
 	int m_nIp;//IPµØÖ·
 	int m_nPort;//¶Ë¿Ú
 	std::vector<char> m_buffer;
@@ -320,7 +320,7 @@ private:
 
 
 	CClientSocket() :
-		m_nIp(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCKET)
+		m_nIp(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCKET),m_bAutoClosed(true)
 	{
 
 		if (InitSockEnv() == FALSE)
@@ -335,6 +335,7 @@ private:
 	CClientSocket& operator=(const CClientSocket& ss){}
 	CClientSocket(const CClientSocket& ss)
 	{
+		m_bAutoClosed = ss.m_bAutoClosed;
 		m_nIp = ss.m_nIp;
 		m_nPort = ss.m_nPort;
 		m_sock = ss.m_sock;

@@ -33,40 +33,57 @@ void CClientSocket::threadFunc()
 	strBuffer.resize(BUFFER_SIZE);
 	char* pBuffer =(char*) strBuffer.c_str();
 	int index = 0;
+	InitSocket();//有问题
 	while (m_sock!=INVALID_SOCKET)
 	{
 		
 		if (m_lstSend.size() > 0)
 		{
+			
 			CPacket& head = m_lstSend.front();
 
 			if (Send(head) == false)
 			{
+				
 				TRACE("发送失败\r\n");
 				continue;
 			}
-			auto pr= m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>>(head.hEvent, std::list<CPacket>()));
-			
-			int length = recv(m_sock, pBuffer + index, BUFFER_SIZE - index, 0);
-			if (length > 0 || index > 0)
+			std::map<HANDLE, std::list<CPacket>>::iterator it;
+			it = m_mapAck.find(head.hEvent);
+			std::map<HANDLE, bool>::iterator it0 = m_mapAutoClosed.find(head.hEvent);
+			do
 			{
-				index += length;
-				size_t size = (size_t)index;
-				CPacket pack((BYTE*)pBuffer, size);
-				if (size > 0)
+				int length = recv(m_sock, pBuffer + index, BUFFER_SIZE - index, 0);
+				if (length > 0 || index > 0)
 				{
-					pack.hEvent = head.hEvent;
-					pr.first->second.push_back(pack);
+					index += length;
+					size_t size = (size_t)index;
+					CPacket pack((BYTE*)pBuffer, size);
+					if (size > 0)
+					{
+						pack.hEvent = head.hEvent;
+						it->second.push_back(pack);
+					
+						memmove(pBuffer, pBuffer + size, index - size);
+						index -= size;
+						if (it0->second)
+						{
+							SetEvent(head.hEvent);
+						}
+					}
+					continue;
+				}
+				else if (length <= 0 && index <= 0)
+				{
+					CloseSocket();
 					SetEvent(head.hEvent);
 				}
-				continue;
-			}
-			else if (length <= 0 && index <= 0)
-			{
-				CloseSocket();
-			}
+			} while (it0->second==false);
+			
 			m_lstSend.pop_front();
+			InitSocket();//有问题
 		}
+		Sleep(50);
 	}
 	CloseSocket();
 }
