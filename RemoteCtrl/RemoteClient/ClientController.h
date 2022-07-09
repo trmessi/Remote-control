@@ -32,12 +32,7 @@ public:
 	{
 		CClientSocket::getInstance()->CloseSocket();
 	}
-	int SendPacket(const CPacket& pack)
-	{
-		CClientSocket* pClient = CClientSocket::getInstance();
-		if (pClient->InitSocket() == false)return false;
-		pClient->Send(pack);
-	}
+	
 	//1.查看磁盘分区
 	//2.查看指定目录下的文件
 	//3.打开文件
@@ -49,7 +44,7 @@ public:
 	//9.删除文件
 	// 1981.测试连接
 	//返回值是命令号，小于0则错误
-	int SendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0);
+	int SendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0, std::list<CPacket>* plstPacks=NULL);
 	
 	int GetImage(CImage& image)
 	{
@@ -88,8 +83,8 @@ protected:
 			m_instance = NULL;
 		}
 	}
-	LRESULT (OnSendPack)(UINT nMsg, WPARAM wParam, LPARAM lParam);
-	LRESULT(OnSendData)(UINT nMsg, WPARAM wParam, LPARAM lParam);
+	//LRESULT (OnSendPack)(UINT nMsg, WPARAM wParam, LPARAM lParam);
+	//LRESULT(OnSendData)(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT(OnShowStatus)(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT(OnShowWatcher)(UINT nMsg, WPARAM wParam, LPARAM lParam);
 private:

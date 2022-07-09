@@ -28,16 +28,14 @@ void CClientSocket::threadEntry(void* arg)
 
 void CClientSocket::threadFunc()
 {
-	if (InitSocket() == false)
-	{
-		return;
-	}
+	
 	std::string strBuffer;
 	strBuffer.resize(BUFFER_SIZE);
 	char* pBuffer =(char*) strBuffer.c_str();
 	int index = 0;
 	while (m_sock!=INVALID_SOCKET)
 	{
+		
 		if (m_lstSend.size() > 0)
 		{
 			CPacket& head = m_lstSend.front();
