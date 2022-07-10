@@ -168,16 +168,19 @@ typedef struct PackData
 {
 	std::string strData;
 	UINT nMode;
-	PackData(const char* pData, size_t nLen, UINT mode)
+	WPARAM wParam;
+	PackData(const char* pData, size_t nLen, UINT mode,WPARAM nParam=0)
 	{
 		strData.resize(nLen);
 		memcpy((char*)strData.c_str(), pData, nLen);
 		nMode = mode;
+		wParam = nParam;
 	}
 	PackData(const PackData& data)
 	{
 		strData = data.strData;
 		nMode = data.nMode;
+		wParam = data.wParam;
 	}
 	PackData& operator =(const PackData& data)
 	{
@@ -185,6 +188,7 @@ typedef struct PackData
 		{
 			strData = data.strData;
 			nMode = data.nMode;
+			wParam = data.wParam;
 		}
 		return *this;
 	}
@@ -265,7 +269,7 @@ public:
 	}
 	
 
-	bool SendPacket(HWND hWnd, CPacket& pack, bool isAutoClosed = true);
+	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed = true,WPARAM nWaram=0);
 
 	/*bool SendPacket(const CPacket& pack,std::list<CPacket>&lstPacks,bool isAutoClosed=true)
 	{

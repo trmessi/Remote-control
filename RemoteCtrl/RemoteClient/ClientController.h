@@ -44,7 +44,7 @@ public:
 	//9.删除文件
 	// 1981.测试连接
 	//返回值是命令号，小于0则错误
-	bool SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0);
+	bool SendCommandPacket(HWND hWnd,int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0,WPARAM wParam=0);
 	
 	int GetImage(CImage& image)
 	{
@@ -52,6 +52,9 @@ public:
 		return CTrTool::Bytes2Image(image, pClient->GetPacket().strData);
 		
 	}
+
+	void DownloadEnd();
+
 	int DownFile(CString strPath);
 
 	void StrarWatchScreen();

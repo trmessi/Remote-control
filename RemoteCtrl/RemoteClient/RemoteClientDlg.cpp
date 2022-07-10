@@ -90,6 +90,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_TIMER()
 	ON_NOTIFY(IPN_FIELDCHANGED, IDC_IPADDRESS_SERV, &CRemoteClientDlg::OnIpnFieldchangedIpaddressServ)
 	ON_EN_CHANGE(IDC_EDIT_port, &CRemoteClientDlg::OnEnChangeEditport)
+	ON_MESSAGE(WM_SEND_PACK_ACK, &CRemoteClientDlg::OnSendPackAck)
 END_MESSAGE_MAP()
 
 
@@ -203,38 +204,12 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	std::list<CPacket>lstPacks;
 	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),1,true,NULL,0);
 	
-	if (ret == -1||(lstPacks.size()<=0))
+	if (ret == -1)
 	{
 		AfxMessageBox(_T("命令处理失败"));
 		return;
 	}
-	CPacket& head = lstPacks.front();
 
-
-	std::string drivers=head.strData;
-	std::string dr;
-	m_Tree.DeleteAllItems();
-	for (size_t i=0;i<drivers.size();i++)
-	{
-		if (drivers[i] == ',')
-		{
-			dr += ':';
-			HTREEITEM hTmp= m_Tree.InsertItem(dr.c_str(),TVI_ROOT,TVI_LAST);
-			m_Tree.InsertItem(NULL, hTmp, TVI_LAST);
-			dr.clear();
-			continue;
-		}
-		
-			dr += drivers[i];
-			if (i == drivers.size() - 1)
-			{
-				dr += ':';
-				HTREEITEM hTmp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-				m_Tree.InsertItem(NULL, hTmp, TVI_LAST);
-				dr.clear();
-
-			}
-	}
 }
 
 
@@ -282,7 +257,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	m_List.DeleteAllItems();
 	CString strPath = GetPath(hTreeSelected);
 	std::list<CPacket>lstPackets;
-	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),(WPARAM)hTreeSelected);
 	if (lstPackets.size() > 0)
 	{
 		std::list<CPacket>::iterator it = lstPackets.begin();
@@ -455,4 +430,115 @@ void CRemoteClientDlg::OnEnChangeEditport()
 	UpdateData();
 	CClientController* pController = CClientController::getInstance();
 	pController->UpdateAddress(m_server_address, atoi((LPCTSTR)m_nPort));
+}
+
+LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
+{
+	if (lParam == -1 || (lParam == -2))
+	{
+		//TODO:chulicuowu
+	}
+	else if (lParam == 1)
+	{
+
+	}
+	else if (lParam == 0)
+	{
+		CPacket* pPacket = (CPacket*)wParam;
+		if (pPacket == NULL)
+		{
+			CPacket& head = *pPacket;
+			switch (pPacket->sCmd)
+			{
+			case 1:
+			{
+				
+
+
+				std::string drivers = head.strData;
+				std::string dr;
+				m_Tree.DeleteAllItems();
+				for (size_t i = 0; i < drivers.size(); i++)
+				{
+					if (drivers[i] == ',')
+					{
+						dr += ':';
+						HTREEITEM hTmp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+						m_Tree.InsertItem(NULL, hTmp, TVI_LAST);
+						dr.clear();
+						continue;
+					}
+
+					dr += drivers[i];
+					if (i == drivers.size() - 1)
+					{
+						dr += ':';
+						HTREEITEM hTmp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+						m_Tree.InsertItem(NULL, hTmp, TVI_LAST);
+						dr.clear();
+
+					}
+				}
+			}
+				break;
+			case 2:
+			{
+				PFILEINFO pInfo = (PFILEINFO)head.strData.c_str();
+				if (pInfo->HasNext == FALSE)break;
+				if (pInfo->IsDirectory)
+				{
+					if (CString(pInfo->szFileName) == "." || (CString(pInfo->szFileName) == ".."))
+					{
+
+						break;
+					}
+					HTREEITEM hTmp = m_Tree.InsertItem(pInfo->szFileName,(HTREEITEM) lParam, TVI_LAST);
+					m_Tree.InsertItem("", hTmp, TVI_LAST);
+				}
+				else
+				{
+					m_List.InsertItem(0, pInfo->szFileName);
+				}
+			}
+				break;
+			case 3:
+				break;
+			case 4:
+			{
+				static LONGLONG length = 0,index=0;
+				if (length == 0)
+				{
+					length =*(LONGLONG*) head.strData.c_str();
+					if (length == 0)
+					{
+						AfxMessageBox("文件长度为0或者无法读取文件");
+						CClientController::getInstance()->DownloadEnd();
+						break;
+					}
+				}
+				else if (length > 0 && index >= length)
+				{
+					fclose((FILE*)lParam);
+					index = 0;
+					length = 0;
+					CClientController::getInstance()->DownloadEnd();
+				}
+				else
+				{
+					FILE* pFile = (FILE*)lParam;
+					fwrite(head.strData.c_str(),1, head.strData.size(), pFile);
+					index += head.strData.size();
+				}
+			}break;
+			case 9:
+				break;
+			case 1981:
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	return 0;
 }
