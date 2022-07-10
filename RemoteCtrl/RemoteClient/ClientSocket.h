@@ -337,6 +337,7 @@ public:
 	}
 
 private:
+	HANDLE m_eventInvoke;//启动事件
 	UINT m_nThreadID;
 	HANDLE m_hThread;
 	std::mutex m_lock;
@@ -381,6 +382,13 @@ private:
 			MessageBox(NULL, _T("无法初始化套接字环境，请检测网络设置！"), _T("初始化错误！"), MB_OK | MB_ICONERROR);
 			exit(0);
 		}
+		m_eventInvoke = CreateEvent(NULL, TRUE, FALSE, NULL);
+		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
+		if (WaitForSingleObject(m_eventInvoke, 100) == WAIT_TIMEOUT)
+		{
+			TRACE("网络消息处理线程启动失败");
+		}
+		CloseHandle(m_eventInvoke);
 		m_buffer.resize(BUFFER_SIZE);
 		memset(m_buffer.data(), 0, BUFFER_SIZE);
 		struct

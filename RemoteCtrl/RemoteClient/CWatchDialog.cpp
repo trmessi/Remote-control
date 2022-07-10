@@ -119,7 +119,7 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 	{
 
 	}
-	else if (lParam == 0||lParam>0)
+	else 
 	{
 		CPacket* pPacket = (CPacket*)wParam;
 		if (pPacket == NULL)

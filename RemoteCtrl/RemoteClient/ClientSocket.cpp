@@ -22,15 +22,12 @@ std::string GetMyErrInfo(int wsaErrCode)
 
 bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed,WPARAM wParam)
 {
-	if (m_hThread == INVALID_HANDLE_VALUE)
-	{
-		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
-	}
+	
 	UINT nMode = isAutoClosed ? CSM_AUTOCLOSE : 0;
 	std::string strOut;
 	pack.Data(strOut);
-	return PostThreadMessage(m_nThreadID, WM_SEND_PACKET,(WPARAM) new PACKET_DATA(strOut.c_str(), strOut.size(),nMode,wParam), (LPARAM)hWnd);
-	
+	bool ret=PostThreadMessage(m_nThreadID, WM_SEND_PACKET,(WPARAM) new PACKET_DATA(strOut.c_str(), strOut.size(),nMode,wParam), (LPARAM)hWnd);
+	return ret;
 }
 
 void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
@@ -181,6 +178,7 @@ void CClientSocket::threadFunc()
 
 void CClientSocket::threadFunc2()
 {
+	SetEvent(m_eventInvoke);
 	MSG msg;
 	while (::GetMessage(&msg,NULL,0,0))
 	{
