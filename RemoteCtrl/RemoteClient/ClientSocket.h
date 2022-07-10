@@ -7,6 +7,7 @@
 #include<list>
 #include <mutex>
 #define WM_SEND_PACKET (WM_USER+1)//发送包数据
+#define WM_SEND_ACK (WM_USER+2)//发送包数据应答
 
 #pragma pack(push)
 #pragma pack(1)
@@ -19,10 +20,10 @@ public:
 	WORD sCmd;//控制命令
 	std::string strData;//包数据
 	WORD sSum;//和校验
-	HANDLE hEvent;
+	
 	//std::string strOut;//整个包的信息
 	CPacket() {}
-	CPacket(WORD nCmd, const BYTE* pData, size_t nSize,HANDLE hEvent)
+	CPacket(WORD nCmd, const BYTE* pData, size_t nSize)
 	{
 		sHead = 0xFEFF;
 		nLength = nSize + 4;
@@ -41,7 +42,7 @@ public:
 		{
 			sSum += BYTE(strData[j]) & 0xFF;
 		}
-		this->hEvent = hEvent;
+		
 	}
 	CPacket(const CPacket& mpack)
 	{
@@ -50,9 +51,9 @@ public:
 		sCmd = mpack.sCmd;
 		strData = mpack.strData;
 		sSum = mpack.sSum;
-		hEvent = mpack.hEvent;
+	
 	}
-	CPacket(const BYTE* pData, size_t& nSize):hEvent(INVALID_HANDLE_VALUE)
+	CPacket(const BYTE* pData, size_t& nSize)
 	{
 		size_t i = 0;
 		for (; i < nSize; i++)//可能有问题
@@ -105,7 +106,7 @@ public:
 			sCmd = mpack.sCmd;
 			strData = mpack.strData;
 			sSum = mpack.sSum;
-			hEvent = mpack.hEvent;
+			
 		}
 		return *this;
 	}
@@ -157,6 +158,38 @@ typedef struct  file_info
 
 
 } FILEINFO, * PFILEINFO;
+
+enum
+{
+	CSM_AUTOCLOSE = 1,//自动关闭
+};
+
+typedef struct PackData
+{
+	std::string strData;
+	UINT nMode;
+	PackData(const char* pData, size_t nLen, UINT mode)
+	{
+		strData.resize(nLen);
+		memcpy((char*)strData.c_str(), pData, nLen);
+		nMode = mode;
+	}
+	PackData(const PackData& data)
+	{
+		strData = data.strData;
+		nMode = data.nMode;
+	}
+	PackData& operator =(const PackData& data)
+	{
+		if (this != &data)
+		{
+			strData = data.strData;
+			nMode = data.nMode;
+		}
+		return *this;
+	}
+	
+}PACKET_DATA;
 
 std::string GetMyErrInfo(int wsaErrCode);
 
@@ -232,16 +265,20 @@ public:
 	}
 	
 
-	bool SendPacket(const CPacket& pack,std::list<CPacket>&lstPacks,bool isAutoClosed=true)
+	bool SendPacket(HWND hWnd, CPacket& pack, bool isAutoClosed = true);
+
+	/*bool SendPacket(const CPacket& pack,std::list<CPacket>&lstPacks,bool isAutoClosed=true)
 	{
 		if (m_sock == INVALID_SOCKET&&m_hThread==INVALID_HANDLE_VALUE)
 		{
 			//if (InitSocket() == false)return false;
 			m_hThread=(HANDLE)_beginthread(&CClientSocket::threadEntry, 0, this);
 		}
+
+		m_lock.lock();
 		auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>&>(pack.hEvent, lstPacks));
 		m_mapAutoClosed.insert(std::pair<HANDLE, bool>(pack.hEvent, isAutoClosed));
-		m_lock.lock();
+		
 		m_lstSend.push_back(pack);
 		m_lock.unlock();
 		WaitForSingleObject(pack.hEvent, INFINITE);
@@ -255,7 +292,7 @@ public:
 			return true;
 		}
 		return false;
-	}
+	}*/
 
 	bool GetFilePath(std::string& strPath)
 	{
@@ -296,6 +333,7 @@ public:
 	}
 
 private:
+	UINT m_nThreadID;
 	HANDLE m_hThread;
 	std::mutex m_lock;
 	bool m_bAutoClosed;
@@ -341,7 +379,21 @@ private:
 		}
 		m_buffer.resize(BUFFER_SIZE);
 		memset(m_buffer.data(), 0, BUFFER_SIZE);
-		
+		struct
+		{
+			UINT message;
+			MSGFUNC func;
+		}funcs[] = {
+			{WM_SEND_PACKET,&CClientSocket::SendPack},
+			{0,NULL}
+		};
+		for (int i = 0; funcs[i].message != 0; i++)
+		{
+			if (m_mapFunc.insert(std::pair<UINT, MSGFUNC>(funcs[i].message, funcs[i].func)).second == false)
+			{
+				TRACE("插入失败");
+			}
+		}
 	}
 	CClientSocket& operator=(const CClientSocket& ss){}
 	CClientSocket(const CClientSocket& ss)
@@ -351,24 +403,14 @@ private:
 		m_nIp = ss.m_nIp;
 		m_nPort = ss.m_nPort;
 		m_sock = ss.m_sock;
-		struct 
+		std::map<UINT, CClientSocket::MSGFUNC>::const_iterator it = ss.m_mapFunc.begin();
+		for (; it != ss.m_mapFunc.end(); it++)
 		{
-			UINT message;
-			MSGFUNC func;
-		}funcs[] = {
-			{WM_SEND_PACKET,&CClientSocket::SendPack},
-			{0,NULL}
-		};
-		for (int i = 0; funcs[i].message!=0; i++)
-		{
-			if (m_mapFunc.insert(std::pair<UINT, MSGFUNC>(funcs[i].message, funcs[i].func)).second == false)
-			{
-				TRACE("插入失败");
-			}
+			m_mapFunc.insert(std::pair<UINT, MSGFUNC>(it->first, it->second));
 		}
 	}
-	static void threadEntry(void* arg);
-	void threadFunc();
+	static unsigned __stdcall threadEntry(void* arg);
+	//void threadFunc();
 	void threadFunc2();
 	BOOL InitSockEnv()
 	{

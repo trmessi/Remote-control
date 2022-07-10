@@ -193,7 +193,7 @@ void CRemoteClientDlg::OnBnClickedBtnTest()
 {
 	// TODO: 在此添加控件通知处理程序代码
 
-	CClientController::getInstance()->SendCommandPacket(1981);
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),1981);
 }
 
 
@@ -201,7 +201,7 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	std::list<CPacket>lstPacks;
-	int ret = CClientController::getInstance()->SendCommandPacket(1,true,NULL,0,&lstPacks);
+	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),1,true,NULL,0);
 	
 	if (ret == -1||(lstPacks.size()<=0))
 	{
@@ -245,7 +245,7 @@ void  CRemoteClientDlg::LoadFileCur()
 
 	m_List.DeleteAllItems();
 	
-	int nCmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	PFILEINFO pInfo = (PFILEINFO)CClientSocket::getInstance()->GetPacket().strData.c_str();
 	
 	while (pInfo->HasNext)
@@ -282,7 +282,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	m_List.DeleteAllItems();
 	CString strPath = GetPath(hTreeSelected);
 	std::list<CPacket>lstPackets;
-	int nCmd = CClientController::getInstance()->SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),&lstPackets);
+	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	if (lstPackets.size() > 0)
 	{
 		std::list<CPacket>::iterator it = lstPackets.begin();
@@ -395,7 +395,7 @@ void CRemoteClientDlg::OnDeleteFile()
 	int nSelected = m_List.GetSelectionMark();
 	CString strFile = m_List.GetItemText(nSelected, 0);
 	strFile = strPath + strFile;
-	int ret = CClientController::getInstance()->SendCommandPacket(9, true, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),9, true, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
 	if (ret < 0)
 	{
 		AfxMessageBox("删除命令执行失败！！！");
@@ -414,7 +414,7 @@ void CRemoteClientDlg::OnRunFile()
 	int nSelected = m_List.GetSelectionMark();
 	CString strFile = m_List.GetItemText(nSelected, 0);
 	strFile = strPath + strFile;
-	int ret = CClientController::getInstance()->SendCommandPacket(3, true, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
+	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),3, true, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());
 	if (ret < 0)
 	{
 		AfxMessageBox("打开命令执行失败！！！");

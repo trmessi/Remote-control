@@ -20,32 +20,86 @@ std::string GetMyErrInfo(int wsaErrCode)
 	return ret;
 }
 
+bool CClientSocket::SendPacket(HWND hWnd, CPacket& pack, bool isAutoClosed)
+{
+	if (m_hThread == INVALID_HANDLE_VALUE)
+	{
+		m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
+	}
+	UINT nMode = isAutoClosed ? CSM_AUTOCLOSE : 0;
+	std::string strOut;
+	pack.Data(strOut);
+	return PostThreadMessage(m_nThreadID, WM_SEND_PACKET,(WPARAM) new PACKET_DATA(strOut.c_str(), strOut.size(),nMode), (LPARAM)hWnd);
+	
+}
+
 void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
+	PACKET_DATA data = *(PACKET_DATA*)wParam;
+	delete(PACKET_DATA*)wParam;
+	HWND hwnd = (HWND)lParam;
 	if (InitSocket() == true)
 	{
-		int ret = send(m_sock, (char*)wParam, (int)lParam, 0);
+		
+		int ret = send(m_sock, (char*)data.strData.c_str(), (int)data.strData.size(), 0);
 		if (ret>0)
 		{
+			size_t index = 0;
+			std::string strBuffer;
+			strBuffer.resize(BUFFER_SIZE);
+			char* pBuffer = (char*)strBuffer.c_str();
+			while (m_sock != INVALID_SOCKET)
+			{
 
+
+				int length = recv(m_sock,pBuffer+index ,BUFFER_SIZE-index , 0);
+				if (length > 0||index>0)
+				{
+					index += (size_t)length;
+					size_t nLen = index;
+					CPacket pack((BYTE*)pBuffer, nLen);
+					if (nLen > 0)
+					{
+						::SendMessage(hwnd, WM_SEND_ACK, (WPARAM)new CPacket(pack), 0);
+						if (data.nMode & CSM_AUTOCLOSE)
+						{
+							CloseSocket();
+							return;
+						}
+					}
+					index -= nLen;
+					memmove(pBuffer, pBuffer + index, nLen);
+				}
+				else
+				{//TODO:对方关闭套接字或网络异常
+					CloseSocket();
+					::SendMessage(hwnd, WM_SEND_ACK, NULL, 1);
+				}
+			}
+			
 		} 
 		else
 		{
 			CloseSocket();
+			::SendMessage(hwnd, WM_SEND_ACK, NULL, -1);
 		}
 	}
 	else
 	{
-
+		::SendMessage(hwnd, WM_SEND_ACK, NULL, -2);
 	}
 }
 
-void CClientSocket::threadEntry(void* arg)
+unsigned CClientSocket::threadEntry(void* arg)
 {
 	CClientSocket* thiz = (CClientSocket*)arg;
-	thiz->threadFunc();
+	thiz->threadFunc2();
+	_endthreadex(0);
+	return 0;
+
 }
 
+/*
 void CClientSocket::threadFunc()
 {
 	
@@ -123,7 +177,7 @@ void CClientSocket::threadFunc()
 		Sleep(1);
 	}
 	CloseSocket();
-}
+}*/
 
 void CClientSocket::threadFunc2()
 {
