@@ -39,9 +39,9 @@ void CClientSocket::threadFunc()
 		
 		if (m_lstSend.size() > 0)
 		{
-			
+			m_lock.lock();
 			CPacket& head = m_lstSend.front();
-
+			m_lock.unlock();
 			if (Send(head) == false)
 			{
 				
@@ -56,7 +56,7 @@ void CClientSocket::threadFunc()
 				do
 				{
 					int length = recv(m_sock, pBuffer + index, BUFFER_SIZE - index, 0);
-					if (length > 0 || index > 0)
+					if ((length > 0) || (index > 0))
 					{
 						index += length;
 						size_t size = (size_t)index;
@@ -71,6 +71,7 @@ void CClientSocket::threadFunc()
 							if (it0->second)
 							{
 								SetEvent(head.hEvent);
+								break;
 							}
 						}
 						continue;
@@ -84,13 +85,16 @@ void CClientSocket::threadFunc()
 					}
 				} while (it0->second == false);
 			}
+			m_lock.lock();
 			m_lstSend.pop_front();
+			m_lock.unlock();
 			if (InitSocket() == false)//ddadafwwawdwad
 			{
 				InitSocket();//”–Œ Ã‚
 			}
 			
 		}
+
 		Sleep(1);
 	}
 	CloseSocket();

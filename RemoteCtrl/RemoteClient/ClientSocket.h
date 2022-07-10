@@ -5,6 +5,7 @@
 #include<vector>
 #include <map>
 #include<list>
+#include <mutex>
 #pragma pack(push)
 #pragma pack(1)
 
@@ -231,21 +232,24 @@ public:
 
 	bool SendPacket(const CPacket& pack,std::list<CPacket>&lstPacks,bool isAutoClosed=true)
 	{
-		if (m_sock == INVALID_SOCKET)
+		if (m_sock == INVALID_SOCKET&&m_hThread==INVALID_HANDLE_VALUE)
 		{
 			//if (InitSocket() == false)return false;
-			_beginthread(&CClientSocket::threadEntry, 0, this);
+			m_hThread=(HANDLE)_beginthread(&CClientSocket::threadEntry, 0, this);
 		}
 		auto pr = m_mapAck.insert(std::pair<HANDLE, std::list<CPacket>&>(pack.hEvent, lstPacks));
 		m_mapAutoClosed.insert(std::pair<HANDLE, bool>(pack.hEvent, isAutoClosed));
+		m_lock.lock();
 		m_lstSend.push_back(pack);
+		m_lock.unlock();
 		WaitForSingleObject(pack.hEvent, INFINITE);
 		std::map<HANDLE, std::list<CPacket>&>::iterator it;
 		it= m_mapAck.find(pack.hEvent);
 		if (it != m_mapAck.end())
 		{
-			
+			m_lock.lock();
 			m_mapAck.erase(it);
+			m_lock.unlock();
 			return true;
 		}
 		return false;
@@ -290,6 +294,8 @@ public:
 	}
 
 private:
+	HANDLE m_hThread;
+	std::mutex m_lock;
 	bool m_bAutoClosed;
 	std::list<CPacket>m_lstSend;
 	std::map<HANDLE, std::list<CPacket>&> m_mapAck;
@@ -320,7 +326,7 @@ private:
 
 
 	CClientSocket() :
-		m_nIp(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCKET),m_bAutoClosed(true)
+		m_nIp(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCKET),m_bAutoClosed(true),m_hThread(INVALID_HANDLE_VALUE)
 	{
 
 		if (InitSockEnv() == FALSE)
