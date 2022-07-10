@@ -51,8 +51,9 @@ END_MESSAGE_MAP()
 CPoint CWatchDialog::UserPoinToRemoteScreenPoint( CPoint& point,bool isScreen)
 {
 	CRect clientRect;
-	if(isScreen)ScreenToClient(&point);
-	
+	if (!isScreen)
+		ClientToScreen(&point);
+	m_picture.ScreenToClient(&point);
 	m_picture.GetWindowRect(clientRect);
 	return CPoint(point.x * m_nObjWidth/ clientRect.Width(), point.y * m_nObjHeight / clientRect.Height());
 }

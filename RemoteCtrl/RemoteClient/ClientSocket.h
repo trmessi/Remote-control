@@ -6,6 +6,8 @@
 #include <map>
 #include<list>
 #include <mutex>
+#define WM_SEND_PACKET (WM_USER+1)//发送包数据
+
 #pragma pack(push)
 #pragma pack(1)
 
@@ -306,6 +308,8 @@ private:
 	SOCKET m_sock;
 	CPacket m_packet;
 
+	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);
+	std::map<UINT, MSGFUNC>m_mapFunc;
 
 	bool Send(const char* pData, int nsize)
 	{
@@ -324,6 +328,7 @@ private:
 		return send(m_sock, strOut.c_str(), strOut.size(), 0) > 0;
 	}
 
+	void SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam);
 
 	CClientSocket() :
 		m_nIp(INADDR_ANY), m_nPort(0),m_sock(INVALID_SOCKET),m_bAutoClosed(true),m_hThread(INVALID_HANDLE_VALUE)
@@ -341,13 +346,30 @@ private:
 	CClientSocket& operator=(const CClientSocket& ss){}
 	CClientSocket(const CClientSocket& ss)
 	{
+		m_hThread = INVALID_HANDLE_VALUE;
 		m_bAutoClosed = ss.m_bAutoClosed;
 		m_nIp = ss.m_nIp;
 		m_nPort = ss.m_nPort;
 		m_sock = ss.m_sock;
+		struct 
+		{
+			UINT message;
+			MSGFUNC func;
+		}funcs[] = {
+			{WM_SEND_PACKET,&CClientSocket::SendPack},
+			{0,NULL}
+		};
+		for (int i = 0; funcs[i].message!=0; i++)
+		{
+			if (m_mapFunc.insert(std::pair<UINT, MSGFUNC>(funcs[i].message, funcs[i].func)).second == false)
+			{
+				TRACE("插入失败");
+			}
+		}
 	}
 	static void threadEntry(void* arg);
 	void threadFunc();
+	void threadFunc2();
 	BOOL InitSockEnv()
 	{
 		WSADATA data;
