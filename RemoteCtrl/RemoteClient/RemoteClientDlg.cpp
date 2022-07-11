@@ -121,20 +121,8 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	}
 
 	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
-	//  执行此操作
-	SetIcon(m_hIcon, TRUE);			// 设置大图标
-	SetIcon(m_hIcon, FALSE);		// 设置小图标
-
 	// TODO: 在此添加额外的初始化代码
-	UpdateData();
-	m_server_address = 0x7F000001;
-	m_nPort = _T("9527");
-	
-	CClientController* pController = CClientController::getInstance();
-	pController->UpdateAddress(m_server_address, atoi((LPCTSTR)m_nPort));
-	UpdateData(FALSE);
-	m_dlgStuts.Create(IDD_DLG_STATUS, this);
-	m_dlgStuts.ShowWindow(SW_HIDE);
+	InitUIData();
 	
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -243,6 +231,49 @@ void  CRemoteClientDlg::LoadFileCur()
 	//CClientController::getInstance()->CloseSocket();
 }
 
+void CRemoteClientDlg::InitUIData()
+{
+	//  执行此操作
+	SetIcon(m_hIcon, TRUE);			// 设置大图标
+	SetIcon(m_hIcon, FALSE);		// 设置小图标
+	UpdateData();
+	m_server_address = 0x7F000001;
+	m_nPort = _T("9527");
+
+	CClientController* pController = CClientController::getInstance();
+	pController->UpdateAddress(m_server_address, atoi((LPCTSTR)m_nPort));
+	UpdateData(FALSE);
+	m_dlgStuts.Create(IDD_DLG_STATUS, this);
+	m_dlgStuts.ShowWindow(SW_HIDE);
+
+}
+
+void CRemoteClientDlg::DealCommand(int nCmd,const std::string& strData, LPARAM lParam)
+{
+	switch (nCmd)
+	{
+	case 1:
+		String2Tree(strData, m_Tree);
+		break;
+	case 2:
+		UpadateFileInfo(*(PFILEINFO)strData.c_str(), (HTREEITEM)lParam);
+		break;
+	case 3:
+		break;
+	case 4:
+		UpadateDownLoadFile(strData, (FILE*)lParam);
+		break;
+	case 9:
+		break;
+	case 1981:
+		MessageBox("连接成功", "成功", MB_ICONINFORMATION);
+		TRACE("SUCCESS!!!");
+		break;
+	default:
+		break;
+	}
+}
+
 void CRemoteClientDlg::LoadFileInfo()
 {
 	CPoint ptMouse;
@@ -251,14 +282,94 @@ void CRemoteClientDlg::LoadFileInfo()
 	HTREEITEM hTreeSelected = m_Tree.HitTest(ptMouse, 0);
 	if (hTreeSelected == NULL)
 		return;
-	if (m_Tree.GetChildItem(hTreeSelected) == NULL)
-		return;
 	DeleteTreeChildrenItem(hTreeSelected);
 	m_List.DeleteAllItems();
 	CString strPath = GetPath(hTreeSelected);
 	
 	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(),(WPARAM)hTreeSelected);
 	
+}
+
+void CRemoteClientDlg::String2Tree(const std::string& drivers, CTreeCtrl& tree)
+{
+	std::string dr;
+	tree.DeleteAllItems();
+	for (size_t i = 0; i < drivers.size(); i++)
+	{
+		if (drivers[i] == ',')
+		{
+			dr += ':';
+			HTREEITEM hTmp = tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			tree.InsertItem(NULL, hTmp, TVI_LAST);
+			dr.clear();
+			continue;
+		}
+
+		dr += drivers[i];
+		if (i == drivers.size() - 1)
+		{
+			dr += ':';
+			HTREEITEM hTmp = tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			tree.InsertItem(NULL, hTmp, TVI_LAST);
+			dr.clear();
+
+		}
+	}
+}
+
+void CRemoteClientDlg::UpadateFileInfo(const FILEINFO& finfo,HTREEITEM hParent)
+{
+	if (finfo.HasNext == FALSE)return;
+	if (finfo.IsDirectory)
+	{
+		if (CString(finfo.szFileName) == "." || (CString(finfo.szFileName) == ".."))
+		{
+
+			return;
+		}
+		HTREEITEM hTmp = m_Tree.InsertItem(finfo.szFileName, hParent, TVI_LAST);
+		m_Tree.InsertItem("", hTmp, TVI_LAST);
+		m_Tree.Expand(hParent, TVE_EXPAND);
+	}
+	else
+	{
+		m_List.InsertItem(0, finfo.szFileName);
+	}
+}
+
+void CRemoteClientDlg::UpadateDownLoadFile(const std::string& strData, FILE* pFile)
+{
+	static LONGLONG length = 0, index = 0;
+	if (length == 0)
+	{
+		length = *(LONGLONG*)strData.c_str();
+		if (length == 0)
+		{
+			AfxMessageBox("文件长度为0或者无法读取文件");
+			CClientController::getInstance()->DownloadEnd();
+			return;
+		}
+	}
+	else if (length > 0 && index >= length)
+	{
+		fclose(pFile);
+		index = 0;
+		length = 0;
+		CClientController::getInstance()->DownloadEnd();
+	}
+	else
+	{
+		
+		fwrite(strData.c_str(), 1, strData.size(), pFile);
+		index += strData.size();
+		if (index >= length)
+		{
+			fclose(pFile);
+			index = 0;
+			length = 0;
+			CClientController::getInstance()->DownloadEnd();
+		}
+	}
 }
 
 CString CRemoteClientDlg::GetPath(HTREEITEM hTree)
@@ -427,100 +538,7 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 		{
 			CPacket head = *(CPacket*)wParam;
 			delete (CPacket*)wParam;
-			switch (head.sCmd)
-			{
-			case 1:
-			{
-				std::string drivers = head.strData;
-				std::string dr;
-				m_Tree.DeleteAllItems();
-				for (size_t i = 0; i < drivers.size(); i++)
-				{
-					if (drivers[i] == ',')
-					{
-						dr += ':';
-						HTREEITEM hTmp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-						m_Tree.InsertItem(NULL, hTmp, TVI_LAST);
-						dr.clear();
-						continue;
-					}
-
-					dr += drivers[i];
-					if (i == drivers.size() - 1)
-					{
-						dr += ':';
-						HTREEITEM hTmp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-						m_Tree.InsertItem(NULL, hTmp, TVI_LAST);
-						dr.clear();
-
-					}
-				}
-			}
-				break;
-			case 2:
-			{
-				PFILEINFO pInfo = (PFILEINFO)head.strData.c_str();
-				if (pInfo->HasNext == FALSE)break;
-				if (pInfo->IsDirectory)
-				{
-					if (CString(pInfo->szFileName) == "." || (CString(pInfo->szFileName) == ".."))
-					{
-
-						break;
-					}
-					HTREEITEM hTmp = m_Tree.InsertItem(pInfo->szFileName,(HTREEITEM) lParam, TVI_LAST);
-					m_Tree.InsertItem("", hTmp, TVI_LAST);
-					m_Tree.Expand((HTREEITEM)lParam, TVE_EXPAND);
-				}
-				else
-				{
-					m_List.InsertItem(0, pInfo->szFileName);
-				}
-			}
-				break;
-			case 3:
-				break;
-			case 4:
-			{
-				static LONGLONG length = 0,index=0;
-				if (length == 0)
-				{
-					length =*(LONGLONG*) head.strData.c_str();
-					if (length == 0)
-					{
-						AfxMessageBox("文件长度为0或者无法读取文件");
-						CClientController::getInstance()->DownloadEnd();
-						break;
-					}
-				}
-				else if (length > 0 && index >= length)
-				{
-					fclose((FILE*)lParam);
-					index = 0;
-					length = 0;
-					CClientController::getInstance()->DownloadEnd();
-				}
-				else
-				{
-					FILE* pFile = (FILE*)lParam;
-					fwrite(head.strData.c_str(),1, head.strData.size(), pFile);
-					index += head.strData.size();
-					if (index >= length)
-					{
-						fclose((FILE*)lParam);
-						index = 0;
-						length = 0;
-						CClientController::getInstance()->DownloadEnd();
-					}
-				}
-			}break;
-			case 9:
-				break;
-			case 1981:
-				break;
-			default:
-				break;
-			}
+			DealCommand(head.sCmd,head.strData, lParam);
 		
 		}
 	}

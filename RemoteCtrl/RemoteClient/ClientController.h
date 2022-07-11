@@ -18,7 +18,7 @@ public:
 	//启动
 	int Invoke(CWnd*& pMainWnd);
 	int InitController();
-	LRESULT SendMessage(MSG msg);
+	
 	//更新网络服务器地址
 	void UpdateAddress(int nIp, int nPort)
 	{
@@ -59,15 +59,14 @@ public:
 
 	void StrarWatchScreen();
 protected:
-	void threadDownloadFile();
-	static void threadEntryDownload(void* arg);
+
+	
 
 	 void   threadWatchScreen();
 	static void threadEntryWatchScreen(void* arg);
 	CClientController():m_statusDlg(&m_remoteDlg),m_watchDlg(&m_remoteDlg)
 	{
 		m_hThread = INVALID_HANDLE_VALUE;
-		m_hThreadDownload= INVALID_HANDLE_VALUE;
 		m_hTreadWatch =INVALID_HANDLE_VALUE;
 		m_nThreadID = -1;
 		m_isClosed = true;
@@ -136,7 +135,6 @@ private:
 	CRemoteClientDlg m_remoteDlg;
 	CStatusDlg m_statusDlg;
 	HANDLE m_hThread;
-	HANDLE m_hThreadDownload;
 	HANDLE m_hTreadWatch;
 	CString m_strRemote;//下载文件远程路径
 	CString m_strLocal;//本地路径

@@ -29,9 +29,12 @@ private:
 	
 	bool m_isClosed;
 public:
-	
+	void InitUIData();
+	void DealCommand(int nCmd,const std::string& strData,LPARAM lParam);
 	void LoadFileInfo();
-	
+	void String2Tree(const std::string& driver, CTreeCtrl& tree);
+	void UpadateFileInfo(const FILEINFO& finfo, HTREEITEM hParent);
+	void UpadateDownLoadFile(const std::string& strData, FILE* pFile);
 private:
 	//static void threadEntryForWatchData(void* arg);
 	//void threadWatchData();
