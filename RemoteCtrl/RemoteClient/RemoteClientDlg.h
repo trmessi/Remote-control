@@ -30,7 +30,7 @@ private:
 	bool m_isClosed;
 public:
 	
-	
+	void LoadFileInfo();
 	
 private:
 	//static void threadEntryForWatchData(void* arg);
@@ -38,7 +38,7 @@ private:
 	//static void threadEntryForDownFile(void* arg);
 	//void threadDownFile();
 	void LoadFileCur();
-	void LoadFileInfo();
+	
 	CString GetPath(HTREEITEM hTree);
 	void DeleteTreeChildrenItem(HTREEITEM hTree);
 	

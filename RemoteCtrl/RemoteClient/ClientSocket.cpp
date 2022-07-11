@@ -40,6 +40,8 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
 	PACKET_DATA data = *(PACKET_DATA*)wParam;
 	delete(PACKET_DATA*)wParam;
 	HWND hwnd = (HWND)lParam;
+	size_t nTemp = data.strData.size();
+	CPacket current((BYTE*)data.strData.c_str(), nTemp);
 	if (InitSocket() == true)
 	{
 		
@@ -68,14 +70,15 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
 							CloseSocket();
 							return;
 						}
+						index -= nLen;
+						memmove(pBuffer, pBuffer + nLen, index);
 					}
-					index -= nLen;
-					memmove(pBuffer, pBuffer + index, nLen);
+					
 				}
 				else
 				{//TODO:对方关闭套接字或网络异常
 					CloseSocket();
-					::SendMessage(hwnd, WM_SEND_ACK, NULL, 1);
+					::SendMessage(hwnd, WM_SEND_ACK,(WPARAM) new CPacket(current.sCmd,NULL,0), 1);
 				}
 			}
 			

@@ -130,7 +130,7 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 			{
 			case 6:
 			{
-				CTrTool::Bytes2Image(m_image, pPacket->strData);
+				CTrTool::Bytes2Image(m_image, head.strData);
 				CRect rect;
 				m_picture.GetWindowRect(rect);
 				m_nObjWidth = m_image.GetWidth();
