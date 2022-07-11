@@ -169,26 +169,29 @@ void CClientController::threadEntryDownload(void* arg)
 void CClientController::threadWatchScreen()
 {
 	Sleep(50);
+	ULONGLONG nTick = GetTickCount64();
 	while (!m_isClosed)
 	{
 		if (m_watchDlg.isFull() == false)
 		{
-			std::list<CPacket>lstPacks;
-			int ret= SendCommandPacket(m_watchDlg.GetSafeHwnd(),true,NULL,0);
+			if (GetTickCount64() - nTick < 200)
+			{
+				Sleep(200 - (GetTickCount64() - nTick));
+
+			}
+			nTick = GetTickCount64();
+			int ret= SendCommandPacket(m_watchDlg.GetSafeHwnd(),6,true,NULL,0);
 			//添加消息响应函数WM_SEND_PACK_ACK
 			//TODO:控制发送频率
-			if (ret == 6)
+			if (ret == 1)
 			{
-				if (CTrTool::Bytes2Image(m_watchDlg.getImage(), lstPacks.front().strData) == 0)
-				{
-					
-					m_watchDlg.SetImageStatus(true);
-				}
-				else
-				{
-					TRACE("获取图片失败 ret=%d\r\n", ret);
-				}
+				TRACE("成功发送请求图片命令");
 			}
+			else
+			{
+					TRACE("获取图片失败 ret=%d\r\n", ret);
+			}
+			
 		}
 		Sleep(1);
 
